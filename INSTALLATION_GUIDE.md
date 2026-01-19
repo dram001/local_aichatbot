@@ -41,7 +41,7 @@ If not installed, download from [ollama.ai](https://ollama.ai/download)
 
 #### Required Python Packages
 ```bash
-pip install requests
+pip install requests Pillow
 ```
 
 ### Ollama Setup

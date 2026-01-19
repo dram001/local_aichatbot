@@ -1,4 +1,4 @@
-# AskForHelp - Quick Start Guide
+# AskForHelp - PC Hardware & Software Support - Quick Start Guide
 
 ## 🚀 Get Started in 3 Steps
 
@@ -28,14 +28,25 @@ This will check if everything is installed.
 python askforhelp_chatbot.py
 ```
 
+**UI Features:**
+- **Red text input box**: Type your problem here
+- **Submit button**: Click to send your message
+- **User messages**: Displayed in red text for easy identification
+- **AI responses**: Displayed in green text
+
 ## 💡 Quick Tips
 
-### What to Ask
+### What to Ask (PC Hardware & Software Only)
 - "My computer is running slow"
-- "Excel keeps crashing"
-- "WiFi won't connect"
-- "Blue screen error"
-- "Printer not working"
+- "Hard drive making clicking noise"
+- "Blue screen error with code 0x0000007B"
+- "WiFi adapter not detected"
+- "Application won't start"
+- "Driver installation failed"
+- "RAM upgrade compatibility"
+- "CPU temperature too high"
+
+⚠️ **Note**: The chatbot only answers PC hardware and software questions. For other topics, it will guide you to submit an IT support ticket.
 
 ### After Chatting
 1. Click **"Generate IT Ticket"**
@@ -43,6 +54,11 @@ python askforhelp_chatbot.py
    - **Copy to Clipboard** - Paste into email
    - **Save to File** - Save as text file
    - **Send Email** - Directly email to IT (requires email config)
+
+### Capture Screenshot
+1. Click **"Capture Screenshot"** button
+2. Screenshot is automatically saved as PNG file
+3. Include screenshot in your IT ticket for visual documentation
 
 ## 🔧 Troubleshooting
 
@@ -64,6 +80,7 @@ ollama pull qwen3:4b
 ## 📁 Files Created
 
 - `askforhelp_chatbot.py` - Main application
+- `model_config.py` - AI model configuration (admin only)
 - `email_config_template.py` - Email template
 - `email_config.py` - Your email settings (create this)
 - `setup.bat` - Setup script
@@ -75,10 +92,12 @@ ollama pull qwen3:4b
 ## 🎯 Key Features
 
 ✓ **Local AI** - Privacy-focused, no cloud  
-✓ **Auto System Info** - Username, hostname, OS, IP  
+✓ **Auto System Info** - Username, hostname, OS, IP, Serial Number  
 ✓ **IT Tickets** - Professional formatted reports  
 ✓ **Email Support** - Send directly to IT  
 ✓ **Export** - Save or copy tickets  
+✓ **Screenshot Capture** - Visual documentation  
+✓ **Admin Model Selection** - LLM model configurable in backend (not visible to users)  
 
 ## 📞 Support
 

@@ -19,6 +19,13 @@ import sys
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import subprocess
+import base64
+from PIL import ImageGrab
+import io
+import model_config
 
 
 class AskForHelpChatbot:
@@ -31,9 +38,11 @@ class AskForHelpChatbot:
         # System Information
         self.system_info = self.get_system_info()
         
-        # Ollama API Configuration
-        self.ollama_url = "http://localhost:11434/api/generate"
-        self.model = "qwen3:4b"
+        # Ollama API Configuration (from model_config.py)
+        self.ollama_url = model_config.OLLAMA_URL
+        self.model = model_config.MODEL_NAME
+        self.available_models = []
+        self.get_available_models()
         
         # Email Configuration
         self.email_config = {
@@ -53,6 +62,80 @@ class AskForHelpChatbot:
         
         # Start with welcome message
         self.show_welcome_message()
+    
+    def get_available_models(self):
+        """Get list of available Ollama models (for admin use)"""
+        try:
+            response = requests.get(
+                "http://localhost:11434/api/tags",
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                models = result.get('models', [])
+                self.available_models = [model['name'] for model in models]
+                
+                # Ensure current model is in the list
+                if self.model not in self.available_models and self.available_models:
+                    self.model = self.available_models[0]
+            else:
+                # Fallback to default model if API fails
+                self.available_models = [self.model]
+                
+        except Exception as e:
+            print(f"Error fetching models: {e}")
+            # Fallback to default model
+            self.available_models = [self.model]
+    
+    def get_serial_number(self):
+        """Get PC serial number (Windows only)"""
+        try:
+            if platform.system() == "Windows":
+                # Get serial number using WMIC
+                result = subprocess.run(
+                    ["wmic", "bios", "get", "serialnumber"],
+                    capture_output=True,
+                    text=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                serial = result.stdout.strip().split('\n')[-1].strip()
+                return serial if serial and serial != "" else "Unknown"
+            else:
+                # For Linux/Mac, try different methods
+                try:
+                    # Linux
+                    result = subprocess.run(
+                        ["cat", "/sys/class/dmi/id/product_uuid"],
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        return result.stdout.strip()
+                except:
+                    pass
+                return "Unknown"
+        except:
+            return "Unknown"
+    
+    def capture_screenshot(self):
+        """Capture screenshot and return as base64 encoded image"""
+        try:
+            # Capture screenshot
+            screenshot = ImageGrab.grab()
+            
+            # Convert to bytes
+            img_byte_arr = io.BytesIO()
+            screenshot.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            
+            # Encode to base64
+            img_base64 = base64.b64encode(img_byte_arr).decode('utf-8')
+            
+            return img_base64
+        except Exception as e:
+            print(f"Screenshot capture failed: {e}")
+            return None
     
     def get_system_info(self):
         """Collect system information for IT reports"""
@@ -81,12 +164,18 @@ class AskForHelpChatbot:
         except:
             python_version = "Unknown"
         
+        try:
+            serial_number = self.get_serial_number()
+        except:
+            serial_number = "Unknown"
+        
         return {
             "username": username,
             "hostname": hostname,
             "ip_address": ip_address,
             "os_info": os_info,
             "python_version": python_version,
+            "serial_number": serial_number,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
     
@@ -148,25 +237,33 @@ class AskForHelpChatbot:
         input_frame = tk.Frame(self.root, bg='#f0f0f0', padx=10, pady=10)
         input_frame.pack(fill='x')
         
+        # User input box with red border
+        input_box = tk.Frame(input_frame, bg='white', relief='solid', bd=1)
+        input_box.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        
         self.user_input = tk.Entry(
-            input_frame,
+            input_box,
             font=('Arial', 11),
-            width=70
+            width=70,
+            bg='white',
+            fg='green',  # Green text for user input
+            relief='flat'
         )
-        self.user_input.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        self.user_input.insert(0, "Type your issues here...")
+        self.user_input.pack(fill='x', expand=True, padx=5, pady=5)
         self.user_input.bind('<Return>', self.send_message)
         
-        send_button = tk.Button(
+        submit_button = tk.Button(
             input_frame,
-            text="Send",
+            text="Submit",
             command=self.send_message,
             font=('Arial', 10, 'bold'),
-            bg='#3498db',
+            bg='#e74c3c',
             fg='white',
-            activebackground='#2980b9',
+            activebackground='#c0392b',
             width=10
         )
-        send_button.pack(side='right')
+        submit_button.pack(side='right')
         
         # Button Frame
         button_frame = tk.Frame(self.root, bg='#f0f0f0', padx=10, pady=5)
@@ -183,6 +280,18 @@ class AskForHelpChatbot:
             width=20
         )
         ticket_button.pack(side='left', padx=(0, 10))
+        
+        screenshot_button = tk.Button(
+            button_frame,
+            text="Capture Screenshot",
+            command=self.capture_and_save_screenshot,
+            font=('Arial', 10),
+            bg='#f39c12',
+            fg='white',
+            activebackground='#e67e22',
+            width=18
+        )
+        screenshot_button.pack(side='left', padx=(0, 10))
         
         clear_button = tk.Button(
             button_frame,
@@ -229,11 +338,15 @@ class AskForHelpChatbot:
 I'm your local AI assistant for PC hardware and software support.
 
 📋 What I can help you with:
-• Troubleshoot computer issues
-• Explain error messages
-• Guide you through software problems
-• Help document hardware issues
+• PC hardware issues (hard drive, RAM, CPU, etc.)
+• Software problems (Windows, applications, errors)
+• Driver issues and updates
+• System performance troubleshooting
 • Generate IT support tickets
+
+⚠️ IMPORTANT RULES:
+1. I can only answer questions about PC hardware and software
+2. For ANY task requiring admin rights or system modification, I will guide you to create an IT support ticket
 
 💡 System Information Collected:
 • Username: {username}
@@ -241,7 +354,7 @@ I'm your local AI assistant for PC hardware and software support.
 • OS: {os_info}
 • IP: {ip_address}
 
-Type your question below or click "Generate IT Ticket" to create a support report.
+Type your PC-related question below or click "Generate IT Ticket" to create a support report.
         """.format(**self.system_info)
         
         self.add_message("System", welcome_msg, is_system=True)
@@ -255,7 +368,7 @@ Type your question below or click "Generate IT Ticket" to create a support repor
             self.chat_display.tag_configure(tag, foreground='#2c3e50', font=('Arial', 10, 'bold'))
         elif sender == "You":
             tag = "user"
-            self.chat_display.tag_configure(tag, foreground='#2980b9', font=('Arial', 11, 'bold'))
+            self.chat_display.tag_configure(tag, foreground='red', font=('Arial', 11, 'bold'))
         else:
             tag = "bot"
             self.chat_display.tag_configure(tag, foreground='#27ae60', font=('Arial', 11, 'bold'))
@@ -298,7 +411,7 @@ Type your question below or click "Generate IT Ticket" to create a support repor
         """Query the Ollama API"""
         try:
             # Prepare the prompt with context
-            prompt = f"""You are AskForHelp, a PC hardware and software support assistant for university IT support.
+            prompt = f"""You are AskForHelp, a PC hardware and software support assistant for ITSU IT support.
 
 System Information:
 - Username: {self.system_info['username']}
@@ -309,7 +422,28 @@ System Information:
 
 User Question: {user_message}
 
-Please provide helpful, clear, and concise assistance. If the user is describing a problem, ask clarifying questions and suggest solutions. If they need to create an IT ticket, help them document the issue properly.
+IMPORTANT RULES:
+1. You ONLY answer questions about PC hardware and software issues
+2. NEVER ask users to perform actions requiring admin rights
+3. NEVER ask users to modify Windows system files or settings
+4. NEVER ask users to update software/drivers themselves
+5. For ANY task requiring admin rights or system modification, ALWAYS guide them to create an IT support ticket
+6. For non-PC questions, explain your scope limitation and guide them to submit an IT ticket
+
+For PC hardware/software questions:
+- Provide helpful troubleshooting steps that don't require admin rights
+- Ask clarifying questions
+- Suggest safe, non-invasive solutions
+- For complex issues or anything requiring admin rights, guide them to create a ticket for further assistance
+
+For issues requiring admin rights or system modification:
+- Politely explain that this requires IT administrator assistance
+- Guide them to create an IT support ticket immediately
+- Do NOT provide step-by-step instructions for admin tasks
+
+For non-PC questions:
+- Explain your scope limitation
+- Guide them to submit an IT ticket for help
 
 Response:"""
             
@@ -359,7 +493,7 @@ Response:"""
             self.root.after(0, lambda: self.user_input.focus())
     
     def send_ticket_email(self, ticket_content):
-        """Send ticket via email to IT support"""
+        """Send ticket via email to IT support with automatic screenshot attachment"""
         if not self.email_config["sender_email"] or not self.email_config["sender_password"]:
             messagebox.showerror("Email Error", 
                 "Email not configured!\n\n"
@@ -401,6 +535,32 @@ This email was sent automatically by AskForHelp Chatbot.
             """
             
             msg.attach(MIMEText(body, 'plain'))
+            
+            # Check for and attach the most recent screenshot
+            screenshot_attached = False
+            screenshot_pattern = f"Screenshot_{self.system_info['hostname']}*.png"
+            import glob
+            screenshot_files = glob.glob(screenshot_pattern)
+            
+            if screenshot_files:
+                # Get the most recent screenshot
+                latest_screenshot = max(screenshot_files, key=os.path.getctime)
+                
+                with open(latest_screenshot, 'rb') as f:
+                    screenshot_data = f.read()
+                
+                # Attach screenshot
+                screenshot_attachment = MIMEBase('application', 'octet-stream')
+                screenshot_attachment.set_payload(screenshot_data)
+                encoders.encode_base64(screenshot_attachment)
+                
+                filename = os.path.basename(latest_screenshot)
+                screenshot_attachment.add_header(
+                    'Content-Disposition',
+                    f'attachment; filename="{filename}"'
+                )
+                msg.attach(screenshot_attachment)
+                screenshot_attached = True
             
             # Connect to SMTP server
             server = smtplib.SMTP(
@@ -558,6 +718,7 @@ Hostname:       {self.system_info['hostname']}
 IP Address:     {self.system_info['ip_address']}
 Operating System: {self.system_info['os_info']}
 Python Version: {self.system_info['python_version']}
+Serial Number:  {self.system_info['serial_number']}
 
 PROBLEM DESCRIPTION
 ------------------
@@ -607,6 +768,41 @@ END OF TICKET
             self.chat_display.config(state='disabled')
             self.chat_history = []
             self.show_welcome_message()
+    
+    def capture_and_save_screenshot(self):
+        """Capture screenshot and save to file"""
+        self.status_var.set("Capturing screenshot...")
+        self.root.update()
+        
+        # Capture in background thread
+        def capture_in_thread():
+            try:
+                screenshot_base64 = self.capture_screenshot()
+                
+                if screenshot_base64:
+                    # Decode and save
+                    img_bytes = base64.b64decode(screenshot_base64)
+                    filename = f"Screenshot_{self.system_info['hostname']}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    
+                    with open(filename, 'wb') as f:
+                        f.write(img_bytes)
+                    
+                    self.root.after(0, lambda: messagebox.showinfo("Screenshot Captured", 
+                        f"Screenshot saved as:\n{filename}"))
+                    self.root.after(0, lambda: self.status_var.set("Ready"))
+                else:
+                    self.root.after(0, lambda: messagebox.showerror("Screenshot Error", 
+                        "Failed to capture screenshot. Please check permissions."))
+                    self.root.after(0, lambda: self.status_var.set("Error"))
+                    
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("Screenshot Error", 
+                    f"Failed to capture screenshot:\n{str(e)}"))
+                self.root.after(0, lambda: self.status_var.set("Error"))
+        
+        thread = threading.Thread(target=capture_in_thread)
+        thread.daemon = True
+        thread.start()
     
     def export_report(self):
         """Export the entire chat history and system info as a report"""

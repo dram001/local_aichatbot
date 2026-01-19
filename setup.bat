@@ -59,6 +59,21 @@ if errorlevel 1 (
 
 echo [✓] requests library is installed
 
+REM Check if Pillow library is installed
+python -c "import PIL" >nul 2>&1
+if errorlevel 1 (
+    echo [!] Pillow library not found
+    echo Installing Pillow library...
+    pip install Pillow
+    if errorlevel 1 (
+        echo Error: Failed to install Pillow library
+        pause
+        exit /b 1
+    )
+)
+
+echo [✓] Pillow library is installed
+
 echo.
 echo ========================================
 echo Setup Complete!

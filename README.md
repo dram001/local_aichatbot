@@ -1,15 +1,18 @@
-# AskForHelp - IT Support Chatbot
+# AskForHelp - PC Hardware & Software Support Chatbot
 
-A local AI-powered chatbot for PC hardware and software help support, designed to assist university IT support teams by automatically gathering system information and generating support tickets.
+A local AI-powered chatbot specifically designed for PC hardware and software troubleshooting. It helps users with computer-related issues and automatically generates IT support tickets for further assistance.
 
 ## Features
 
 - **Local AI Processing**: Uses Ollama with Qwen3-4B model for privacy and offline operation
-- **Automatic System Information Collection**: Captures username, hostname, IP address, and OS details
+- **Automatic System Information Collection**: Captures username, hostname, IP address, OS, and PC serial number
+- **Screenshot Capture**: Automatically capture and save screenshots for visual documentation
 - **IT Ticket Generation**: Creates formatted support tickets with all relevant information
 - **Chat History**: Maintains conversation history for reference
 - **Export Reports**: Save tickets and reports as text files
+- **Email Integration**: Send tickets directly to IT support (douglas.ho@hkuspace.hku.hk) with automatic screenshot attachment
 - **LAN API Access**: Ollama can be configured for network access
+- **Admin Model Selection**: LLM model can be configured by admin in backend file (not visible to users)
 
 ## Prerequisites
 
@@ -73,6 +76,22 @@ To allow other computers on the network to access Ollama:
    New-NetFirewallRule -DisplayName "Ollama API" -Direction Inbound -LocalPort 11434 -Protocol TCP -Action Allow
    ```
 
+### Model Configuration (Admin Only)
+To change the AI model, edit `model_config.py`:
+
+```python
+MODEL_NAME = "qwen3:4b"  # Change to any Ollama model you have installed
+```
+
+Available models:
+- qwen3:4b (default, recommended)
+- llama2:7b, llama2:13b
+- mistral:7b
+- codellama:7b
+- phi:2.7b
+
+**Note**: The model name is hidden from end users. Only administrators can change it.
+
 ### Email Configuration
 To enable email sending for IT support tickets, configure the email settings in `askforhelp_chatbot.py`:
 
@@ -113,8 +132,10 @@ self.email_config = {
 ### Features
 
 #### Chat Interface
-- **Type questions**: Ask about hardware issues, software problems, error messages
+- **Type questions**: Type your problem in the red text input box
+- **Submit**: Click "Submit" button or press Enter to send
 - **AI Assistance**: Get troubleshooting help and guidance
+- **User Messages**: Displayed in red text for easy identification
 - **System Info**: Automatically includes your username and hostname in responses
 
 #### Generate IT Ticket
@@ -191,6 +212,8 @@ The application automatically collects and includes in reports:
 - **No Cloud Uploads**: No data is sent to external servers
 - **LAN Access**: Can be configured for trusted network access only
 - **File Export**: Tickets are saved locally as text files
+- **Admin Rights Protection**: The bot will NEVER ask users to perform actions requiring admin rights or system modifications
+- **Safe Troubleshooting**: Only provides non-invasive troubleshooting steps that don't require administrator privileges
 
 ## Troubleshooting
 

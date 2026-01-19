@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-**AskForHelp** is a complete local AI-powered chatbot application designed for university IT support. It uses Ollama's local LLM to provide hardware and software troubleshooting assistance while automatically collecting system information and generating professional IT support tickets.
+**AskForHelp** is a complete local AI-powered chatbot application designed for university IT support. It uses Ollama's local LLM to provide **PC hardware and software troubleshooting assistance only** while automatically collecting system information and generating professional IT support tickets.
+
+⚠️ **Scope**: This chatbot is specifically designed to answer questions about PC hardware and software issues. For other topics, it guides users to submit IT support tickets.
 
 ## Key Features Implemented
 

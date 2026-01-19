@@ -26,6 +26,7 @@ import base64
 from PIL import ImageGrab
 import io
 import model_config
+import model_behavior_config
 
 
 class AskForHelpChatbot:
@@ -43,6 +44,9 @@ class AskForHelpChatbot:
         self.model = model_config.MODEL_NAME
         self.available_models = []
         self.get_available_models()
+        
+        # Model behavior configuration
+        self.model_behavior = model_behavior_config
         
         # Email Configuration
         self.email_config = {
@@ -347,6 +351,7 @@ I'm your local AI assistant for PC hardware and software support.
 ⚠️ IMPORTANT RULES:
 1. I can only answer questions about PC hardware and software
 2. For ANY task requiring admin rights or system modification, I will guide you to create an IT support ticket
+3. See AI_GUIDANCE.md for complete guidance on how I answer questions
 
 💡 System Information Collected:
 • Username: {username}
@@ -410,53 +415,22 @@ Type your PC-related question below or click "Generate IT Ticket" to create a su
     def query_ai(self, user_message):
         """Query the Ollama API"""
         try:
-            # Prepare the prompt with context
-            prompt = f"""You are AskForHelp, a PC hardware and software support assistant for ITSU IT support.
-
-System Information:
-- Username: {self.system_info['username']}
-- Hostname: {self.system_info['hostname']}
-- OS: {self.system_info['os_info']}
-- IP Address: {self.system_info['ip_address']}
-- Timestamp: {self.system_info['timestamp']}
-
-User Question: {user_message}
-
-IMPORTANT RULES:
-1. You ONLY answer questions about PC hardware and software issues
-2. NEVER ask users to perform actions requiring admin rights
-3. NEVER ask users to modify Windows system files or settings
-4. NEVER ask users to update software/drivers themselves
-5. For ANY task requiring admin rights or system modification, ALWAYS guide them to create an IT support ticket
-6. For non-PC questions, explain your scope limitation and guide them to submit an IT ticket
-
-For PC hardware/software questions:
-- Provide helpful troubleshooting steps that don't require admin rights
-- Ask clarifying questions
-- Suggest safe, non-invasive solutions
-- For complex issues or anything requiring admin rights, guide them to create a ticket for further assistance
-
-For issues requiring admin rights or system modification:
-- Politely explain that this requires IT administrator assistance
-- Guide them to create an IT support ticket immediately
-- Do NOT provide step-by-step instructions for admin tasks
-
-For non-PC questions:
-- Explain your scope limitation
-- Guide them to submit an IT ticket for help
-
-Response:"""
+            # Prepare the prompt with context using model behavior configuration
+            prompt = self.model_behavior.SYSTEM_PROMPT_TEMPLATE.format(
+                username=self.system_info['username'],
+                hostname=self.system_info['hostname'],
+                os_info=self.system_info['os_info'],
+                ip_address=self.system_info['ip_address'],
+                timestamp=self.system_info['timestamp'],
+                user_message=user_message
+            )
             
-            # Prepare the request
+            # Prepare the request using model behavior configuration
             payload = {
                 "model": self.model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "max_tokens": 1024
-                }
+                "options": self.model_behavior.get_model_parameters()
             }
             
             # Send request to Ollama

@@ -32,9 +32,18 @@ import model_behavior_config
 class AskForHelpChatbot:
     def __init__(self, root):
         self.root = root
-        self.root.title("AskForHelp - IT Support Assistant")
-        self.root.geometry("900x700")
-        self.root.configure(bg='#f0f0f0')
+        
+        # # Set silver 1x1 pixel icon to replace the tkinter logo
+        # try:
+        #     self.root.iconbitmap('askforhelp_icon.ico')
+        # except:
+        #     # Fallback to blank icon if icon file not found
+        #     blank_icon = tk.PhotoImage(width=1, height=1)
+        #     self.root.iconphoto(True, blank_icon)
+        
+        # Set window title
+        self.root.iconbitmap('askforhelp_icon.ico')
+        self.root.title("AskForHelp")
         
         # System Information
         self.system_info = self.get_system_info()
